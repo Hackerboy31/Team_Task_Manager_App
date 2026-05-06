@@ -18,7 +18,6 @@ export default function Projects() {
   const [loading, setLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
-  // NEW: State to track which project's members are expanded in Member view
   const [expandedProjects, setExpandedProjects] = useState([]);
 
   useEffect(() => {
@@ -42,6 +41,22 @@ export default function Projects() {
       setLoading(false);
     }
   }
+
+  // --- YE RAHA TERA STATUS UPDATE FEATURE ---
+  const handleStatusUpdate = async (projectId, newStatus) => {
+    try {
+      const { data } = await axiosInstance.patch(
+        `/projects/${projectId}/status`,
+        {
+          status: newStatus,
+        },
+      );
+      setProjects(projects.map((p) => (p._id === projectId ? data : p)));
+      toast.success(`Status updated to ${newStatus}`);
+    } catch (err) {
+      toast.error("Status update fail ho gaya");
+    }
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -95,7 +110,6 @@ export default function Projects() {
     }));
   };
 
-  // Logic to toggle member list visibility
   const toggleMembers = (projectId) => {
     setExpandedProjects((prev) =>
       prev.includes(projectId)
@@ -120,11 +134,12 @@ export default function Projects() {
       </div>
     );
 
+  const statusOptions = ["Pending", "In-Progress", "Completed"];
+
   return (
     <main className="p-4 md:p-6 lg:p-8 space-y-8 animate-fade-in transition-all">
       <Topbar title="Project Workspace" />
 
-      {/* Admin Action Section */}
       {user?.role === "Admin" && (
         <section className="flex items-center justify-between gap-4 p-5 rounded-2xl bg-white border border-slate-200/60 shadow-sm transition-all hover:shadow-md">
           <div className="flex-1">
@@ -144,7 +159,6 @@ export default function Projects() {
         </section>
       )}
 
-      {/* Search Bar */}
       <section className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm">
         <input
           type="text"
@@ -155,7 +169,6 @@ export default function Projects() {
         />
       </section>
 
-      {/* Main Content */}
       {user?.role === "Admin" ? (
         <section className="rounded-3xl border border-slate-200/60 bg-white shadow-sm overflow-hidden transition-all">
           <div className="overflow-x-auto">
@@ -169,7 +182,7 @@ export default function Projects() {
                     Description
                   </th>
                   <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Members
+                    Status
                   </th>
                   <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500 text-right">
                     Actions
@@ -188,8 +201,20 @@ export default function Projects() {
                     <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-sm">
                       {proj.description}
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-indigo-700 bg-indigo-50/50 rounded-full inline-block mt-2">
-                      {proj.members.length} Assigned
+                    <td className="px-6 py-4 text-sm">
+                      <select
+                        value={proj.status || "Pending"}
+                        onChange={(e) =>
+                          handleStatusUpdate(proj._id, e.target.value)
+                        }
+                        className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-400"
+                      >
+                        {statusOptions.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
@@ -212,14 +237,25 @@ export default function Projects() {
               key={proj._id}
               className="group rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1"
             >
-              <h4 className="text-lg font-bold tracking-tight text-slate-900 group-hover:text-indigo-700 transition-colors">
-                {proj.title}
-              </h4>
+              <div className="flex justify-between items-start">
+                <h4 className="text-lg font-bold tracking-tight text-slate-900 group-hover:text-indigo-700 transition-colors">
+                  {proj.title}
+                </h4>
+                <select
+                  value={proj.status || "Pending"}
+                  onChange={(e) => handleStatusUpdate(proj._id, e.target.value)}
+                  className="bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded-md outline-none"
+                >
+                  {statusOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <p className="mt-2 text-sm text-slate-600 line-clamp-3 min-h-[4.5rem]">
                 {proj.description}
               </p>
-
-              {/* Member Logic Update: Count + Toggle Button */}
               <div className="mt-6 border-t border-slate-100 pt-5">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -234,7 +270,6 @@ export default function Projects() {
                       : "View Names"}
                   </button>
                 </div>
-
                 {expandedProjects.includes(proj._id) && (
                   <div className="flex flex-wrap gap-2 animate-fade-in transition-all duration-300">
                     {proj.members.map((m) => (
@@ -253,7 +288,7 @@ export default function Projects() {
         </section>
       )}
 
-      {/* Modal remains the same */}
+      {/* Modal logic unchanged */}
       {isModalOpen && (
         <div
           className="fixed inset-0 z-50 overflow-y-auto"
