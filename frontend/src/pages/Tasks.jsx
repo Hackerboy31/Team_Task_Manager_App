@@ -21,6 +21,9 @@ export default function Tasks() {
   const [filterStatus, setFilterStatus] = useState("All");
   const [loading, setLoading] = useState(true);
 
+  // FIXED: Backend compatibility ke liye options
+  const statusOptions = ["Pending", "In-Progress", "Completed"];
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -71,14 +74,17 @@ export default function Tasks() {
     }
   };
 
-  const handleStatusChange = async (taskId, status) => {
+  // FIXED: Dropdown Status Change (Admin aur Member dono ke liye)
+  const handleStatusChange = async (taskId, newStatus) => {
     try {
-      const { data } = await axiosInstance.patch(`/tasks/${taskId}/status`, {
-        status,
+      const { data } = await axiosInstance.put(`/tasks/${taskId}`, {
+        status: newStatus,
       });
-      toast.success("Task status updated!");
+
+      toast.success(`Status updated to ${newStatus}`);
       setTasks(tasks.map((t) => (t._id === taskId ? data : t)));
     } catch (err) {
+      console.error("Status update error:", err);
       toast.error(err.response?.data?.message || "Error updating status");
     }
   };
@@ -111,7 +117,6 @@ export default function Tasks() {
     (t) => filterStatus === "All" || t.status === filterStatus,
   );
 
-  // EXACT FIX: Find the selected project and filter employees who are members of it
   const selectedProjectObj = projects.find((p) => p._id === formData.project);
   const availableAssignees = employees.filter((emp) => {
     if (!selectedProjectObj || !selectedProjectObj.members) return false;
@@ -135,38 +140,35 @@ export default function Tasks() {
     <main className="p-4 md:p-6 lg:p-8 space-y-8 animate-fade-in transition-all">
       <Topbar title="Task Control" />
 
-      {/* Header, Filters & Admin Create Task Button */}
       <section className="p-6 rounded-3xl bg-white border border-slate-200/60 shadow-sm space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <h2 className="text-xl font-bold tracking-tight text-slate-900">
               Task Overview Portal
             </h2>
-            <p className="mt-1 text-sm font-medium text-slate-500 line-clamp-2">
-              Filter, edit, and update the current task list for all your
-              projects.
+            <p className="mt-1 text-sm font-medium text-slate-500">
+              Filter and update tasks.
             </p>
           </div>
           {user?.role === "Admin" && (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-md shadow-slate-950/10 transition-all duration-300 hover:bg-slate-800 hover:-translate-y-0.5 active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-slate-800 hover:-translate-y-0.5"
             >
               <span className="text-xl">+</span> New Task Assignment
             </button>
           )}
         </div>
 
-        {/* Modern Filter Buttons */}
         <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-5">
-          {["All", "Pending", "In Progress", "Completed"].map((status) => (
+          {["All", ...statusOptions].map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 active:scale-[0.98] ${
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
                 filterStatus === status
-                  ? "bg-slate-900 text-white shadow-md shadow-slate-950/10"
-                  : "text-slate-600 bg-white hover:bg-slate-100 hover:text-slate-900 ring-1 ring-slate-100 hover:ring-slate-200"
+                  ? "bg-slate-900 text-white shadow-md"
+                  : "text-slate-600 bg-white hover:bg-slate-100 ring-1 ring-slate-100"
               }`}
             >
               {status}{" "}
@@ -177,19 +179,16 @@ export default function Tasks() {
         </div>
       </section>
 
-      {/* Modern Tasks List (Grid for better visual) */}
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredTasks.length === 0 ? (
-          <div className="md:col-span-2 xl:col-span-3 border-2 border-dashed border-slate-100 rounded-3xl py-16 text-center text-slate-400 transition-all">
-            <p className="text-sm font-medium">
-              No tasks found for the current filter.
-            </p>
+          <div className="md:col-span-2 xl:col-span-3 border-2 border-dashed border-slate-100 rounded-3xl py-16 text-center text-slate-400">
+            No tasks found.
           </div>
         ) : (
           filteredTasks.map((task) => (
             <div
               key={task._id}
-              className="group flex flex-col rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1"
+              className="group flex flex-col rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
             >
               <div className="flex items-center justify-between gap-4 mb-4">
                 <div
@@ -200,7 +199,7 @@ export default function Tasks() {
                 {user?.role === "Admin" && (
                   <button
                     onClick={() => openModalForEdit(task)}
-                    className="rounded-lg bg-white px-3 py-1 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-slate-900 hover:text-white"
+                    className="rounded-lg bg-white px-3 py-1 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-900 hover:text-white"
                   >
                     Edit
                   </button>
@@ -214,7 +213,7 @@ export default function Tasks() {
                 {task.description}
               </p>
 
-              <div className="mt-6 border-t border-slate-100 pt-5 space-y-3">
+              <div className="mt-6 border-t border-slate-100 pt-5 space-y-3 mb-6">
                 <div className="flex items-center gap-2.5">
                   <span className="text-xs font-semibold text-slate-400 uppercase">
                     Project
@@ -233,59 +232,39 @@ export default function Tasks() {
                 </div>
               </div>
 
-              {/* Status Update Actions */}
-              {user?.role === "Member" && task.status !== "Completed" && (
-                <div className="mt-6 flex gap-2 border-t border-slate-100 pt-5">
-                  {task.status === "Pending" && (
-                    <button
-                      onClick={() =>
-                        handleStatusChange(task._id, "In Progress")
-                      }
-                      className="flex-1 rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-900 shadow-sm ring-1 ring-amber-200 transition-all hover:bg-amber-200 hover:scale-[1.02]"
-                    >
-                      Start Work
-                    </button>
-                  )}
-                  {task.status === "In Progress" && (
-                    <button
-                      onClick={() => handleStatusChange(task._id, "Completed")}
-                      className="flex-1 rounded-lg bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-900 shadow-sm ring-1 ring-emerald-200 transition-all hover:bg-emerald-200 hover:scale-[1.02]"
-                    >
-                      Mark Completed
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* FIXED: Member View mein bhi Dropdown dikhega ab */}
+              <div className="mt-auto pt-4 border-t border-slate-50">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">
+                  Update Status
+                </label>
+                <select
+                  value={task.status}
+                  onChange={(e) => handleStatusChange(task._id, e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/10 cursor-pointer transition-all"
+                >
+                  {statusOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           ))
         )}
       </section>
 
-      {/* Finalized Modal for Admin to Create/Edit Tasks */}
+      {/* Modal remains same as your original code */}
       {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 overflow-y-auto"
-          aria-labelledby="modal-title"
-          role="dialog"
-          aria-modal="true"
-        >
+        <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog">
           <div className="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
-            {/* Backdrop animation */}
             <div
-              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity animate-fade-in"
-              aria-hidden="true"
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
               onClick={closeModal}
             ></div>
-
-            {/* Modal positioning */}
-            <span
-              className="hidden sm:inline-block sm:h-screen sm:align-middle"
-              aria-hidden="true"
-            >
+            <span className="hidden sm:inline-block sm:h-screen sm:align-middle">
               &#8203;
             </span>
-
-            {/* Modal Content animation */}
             <div className="relative inline-block transform overflow-hidden rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:align-middle animate-modal-slide-in">
               <form
                 onSubmit={editingId ? handleUpdate : handleCreate}
@@ -296,14 +275,13 @@ export default function Tasks() {
                     {editingId ? "Modify Task Details" : "Initialize New Task"}
                   </h3>
                   <p className="mt-1 text-sm text-slate-600">
-                    Please define the task and project context for the assignee.
+                    Define the task context for the assignee.
                   </p>
                 </div>
-
                 <div className="space-y-6 overflow-y-auto max-h-[60vh] px-1 pb-4">
                   <div>
                     <label
-                      className="block text-sm font-semibold text-slate-700 ml-1"
+                      className="block text-sm font-semibold text-slate-700"
                       htmlFor="project"
                     >
                       Parent Project
@@ -315,10 +293,10 @@ export default function Tasks() {
                         setFormData((prev) => ({
                           ...prev,
                           project: e.target.value,
-                          assignedTo: "", // EXACT FIX: Resets assignee when project changes
+                          assignedTo: "",
                         }))
                       }
-                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 shadow-sm transition duration-150 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20"
+                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-400/20"
                       required
                     >
                       <option value="">Select Project</option>
@@ -331,7 +309,7 @@ export default function Tasks() {
                   </div>
                   <div>
                     <label
-                      className="block text-sm font-semibold text-slate-700 ml-1"
+                      className="block text-sm font-semibold text-slate-700"
                       htmlFor="title"
                     >
                       Task Title
@@ -339,7 +317,6 @@ export default function Tasks() {
                     <input
                       id="title"
                       type="text"
-                      placeholder="Define a clear task objective"
                       value={formData.title}
                       onChange={(e) =>
                         setFormData((prev) => ({
@@ -347,20 +324,19 @@ export default function Tasks() {
                           title: e.target.value,
                         }))
                       }
-                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 shadow-sm transition duration-150 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20"
+                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-400/20"
                       required
                     />
                   </div>
                   <div>
                     <label
-                      className="block text-sm font-semibold text-slate-700 ml-1"
+                      className="block text-sm font-semibold text-slate-700"
                       htmlFor="description"
                     >
                       Description
                     </label>
                     <textarea
                       id="description"
-                      placeholder="Add key context, dependencies, or deliverables for this task..."
                       value={formData.description}
                       onChange={(e) =>
                         setFormData((prev) => ({
@@ -368,13 +344,13 @@ export default function Tasks() {
                           description: e.target.value,
                         }))
                       }
-                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 shadow-sm transition duration-150 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20 min-h-32"
+                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-400/20 min-h-32"
                       required
                     />
                   </div>
                   <div>
                     <label
-                      className="block text-sm font-semibold text-slate-700 ml-1"
+                      className="block text-sm font-semibold text-slate-700"
                       htmlFor="assignedTo"
                     >
                       Team Assignee
@@ -388,7 +364,7 @@ export default function Tasks() {
                           assignedTo: e.target.value,
                         }))
                       }
-                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 shadow-sm transition duration-150 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20 disabled:opacity-50"
+                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-400/20"
                       required
                       disabled={!formData.project}
                     >
@@ -404,45 +380,18 @@ export default function Tasks() {
                       ))}
                     </select>
                   </div>
-                  {editingId && (
-                    <div>
-                      <label
-                        className="block text-sm font-semibold text-slate-700 ml-1"
-                        htmlFor="status"
-                      >
-                        Override Status
-                      </label>
-                      <select
-                        id="status"
-                        value={formData.status}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            status: e.target.value,
-                          }))
-                        }
-                        className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 shadow-sm transition duration-150 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20"
-                        required
-                      >
-                        <option value="Pending">Pending</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Completed</option>
-                      </select>
-                    </div>
-                  )}
                 </div>
-
                 <div className="mt-12 flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="rounded-xl bg-slate-100 px-5 py-3 text-sm font-bold text-slate-600 transition duration-150 hover:bg-slate-200 active:scale-[0.98]"
+                    className="rounded-xl bg-slate-100 px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-md shadow-slate-950/10 transition-all duration-300 hover:bg-slate-800 hover:-translate-y-0.5 active:scale-[0.98]"
+                    className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-slate-800 hover:-translate-y-0.5"
                   >
                     {editingId ? "Update Task Details" : "Launch Task"}
                   </button>

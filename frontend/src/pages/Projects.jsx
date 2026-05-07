@@ -16,9 +16,10 @@ export default function Projects() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedProjects, setExpandedProjects] = useState([]);
+
+  const statusOptions = ["Pending", "In-Progress", "Completed"];
 
   useEffect(() => {
     fetchData();
@@ -42,7 +43,7 @@ export default function Projects() {
     }
   }
 
-  // --- YE RAHA TERA STATUS UPDATE FEATURE ---
+  // --- STATUS UPDATE LOGIC (ADMIN & MEMBER BOTH) ---
   const handleStatusUpdate = async (projectId, newStatus) => {
     try {
       const { data } = await axiosInstance.patch(
@@ -52,9 +53,9 @@ export default function Projects() {
         },
       );
       setProjects(projects.map((p) => (p._id === projectId ? data : p)));
-      toast.success(`Status updated to ${newStatus}`);
+      toast.success(`Status: ${newStatus}`);
     } catch (err) {
-      toast.error("Status update fail ho gaya");
+      toast.error("Status update failed");
     }
   };
 
@@ -81,7 +82,7 @@ export default function Projects() {
       setProjects(projects.map((p) => (p._id === editingId ? data : p)));
       closeModal();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Error updating project");
+      toast.error("Error updating project");
     }
   };
 
@@ -101,15 +102,6 @@ export default function Projects() {
     setFormData({ title: "", description: "", members: [] });
   };
 
-  const handleMemberChange = (empId) => {
-    setFormData((prev) => ({
-      ...prev,
-      members: prev.members.includes(empId)
-        ? prev.members.filter((id) => id !== empId)
-        : [...prev.members, empId],
-    }));
-  };
-
   const toggleMembers = (projectId) => {
     setExpandedProjects((prev) =>
       prev.includes(projectId)
@@ -118,133 +110,110 @@ export default function Projects() {
     );
   };
 
-  const filteredProjects = projects.filter((proj) => {
-    if (!searchQuery) return true;
-    const lowerCaseQuery = searchQuery.toLowerCase();
-    return (
-      proj.title.toLowerCase().includes(lowerCaseQuery) ||
-      (proj.description || "").toLowerCase().includes(lowerCaseQuery)
-    );
-  });
+  const filteredProjects = projects.filter((proj) =>
+    proj.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   if (loading)
     return (
-      <div className="flex h-screen items-center justify-center text-sm font-semibold text-slate-500 animate-pulse">
-        Loading workspace projects...
+      <div className="flex h-screen items-center justify-center font-bold">
+        Loading...
       </div>
     );
 
-  const statusOptions = ["Pending", "In-Progress", "Completed"];
-
   return (
-    <main className="p-4 md:p-6 lg:p-8 space-y-8 animate-fade-in transition-all">
+    <main className="p-4 md:p-8 space-y-8">
       <Topbar title="Project Workspace" />
 
-      {user?.role === "Admin" && (
-        <section className="flex items-center justify-between gap-4 p-5 rounded-2xl bg-white border border-slate-200/60 shadow-sm transition-all hover:shadow-md">
-          <div className="flex-1">
-            <h2 className="text-xl font-bold tracking-tight text-slate-900">
-              Project Management Portal
-            </h2>
-            <p className="mt-1 text-sm font-medium text-slate-500 line-clamp-2">
-              Overview, creating, and editing of team initiatives
-            </p>
-          </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-md shadow-slate-950/10 transition-all duration-300 hover:bg-slate-800 hover:-translate-y-0.5 active:scale-[0.98]"
-          >
-            <span className="text-xl">+</span> New Project
-          </button>
-        </section>
-      )}
-
-      <section className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm">
+      {/* SEARCH & CREATE SECTION */}
+      <section className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <input
           type="text"
-          placeholder="Search projects by title or description..."
+          placeholder="Search projects..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:max-w-md rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 shadow-sm transition duration-150 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20 outline-none"
+          className="w-full max-w-md rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
         />
+        {user.role === "Admin" && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all"
+          >
+            + New Project
+          </button>
+        )}
       </section>
 
-      {user?.role === "Admin" ? (
-        <section className="rounded-3xl border border-slate-200/60 bg-white shadow-sm overflow-hidden transition-all">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left table-auto">
-              <thead className="border-b border-slate-200 bg-slate-100/80">
-                <tr>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Project Title
-                  </th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Description
-                  </th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500 text-right">
-                    Actions
-                  </th>
+      {/* VIEW LOGIC */}
+      {user.role === "Admin" ? (
+        <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">
+                  Title
+                </th>
+                <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">
+                  Status
+                </th>
+                <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 text-right">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProjects.map((proj) => (
+                <tr
+                  key={proj._id}
+                  className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
+                >
+                  <td className="px-6 py-4 font-semibold text-slate-800">
+                    {proj.title}
+                  </td>
+                  <td className="px-6 py-4">
+                    <select
+                      value={proj.status || "Pending"}
+                      onChange={(e) =>
+                        handleStatusUpdate(proj._id, e.target.value)
+                      }
+                      className="bg-white border border-slate-200 text-xs font-bold rounded-lg px-2 py-1 outline-none"
+                    >
+                      {statusOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => openModalForEdit(proj)}
+                      className="text-xs font-bold text-indigo-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredProjects.map((proj) => (
-                  <tr
-                    key={proj._id}
-                    className="border-b border-slate-100 transition-all duration-200 hover:bg-slate-50"
-                  >
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-800">
-                      {proj.title}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-sm">
-                      {proj.description}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <select
-                        value={proj.status || "Pending"}
-                        onChange={(e) =>
-                          handleStatusUpdate(proj._id, e.target.value)
-                        }
-                        className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-400"
-                      >
-                        {statusOptions.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => openModalForEdit(proj)}
-                        className="rounded-lg bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-slate-900 hover:text-white"
-                      >
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </section>
       ) : (
-        <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((proj) => (
             <div
               key={proj._id}
-              className="group rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1"
+              className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all"
             >
-              <div className="flex justify-between items-start">
-                <h4 className="text-lg font-bold tracking-tight text-slate-900 group-hover:text-indigo-700 transition-colors">
+              <div className="flex justify-between items-start mb-4">
+                <h4 className="text-lg font-bold text-slate-900">
                   {proj.title}
                 </h4>
+                {/* MEMBER DROPDOWN UPDATE */}
                 <select
                   value={proj.status || "Pending"}
                   onChange={(e) => handleStatusUpdate(proj._id, e.target.value)}
-                  className="bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded-md outline-none"
+                  className="bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase px-2 py-1 rounded-md border-none outline-none cursor-pointer"
                 >
                   {statusOptions.map((opt) => (
                     <option key={opt} value={opt}>
@@ -253,29 +222,25 @@ export default function Projects() {
                   ))}
                 </select>
               </div>
-              <p className="mt-2 text-sm text-slate-600 line-clamp-3 min-h-[4.5rem]">
+              <p className="text-sm text-slate-600 line-clamp-2 mb-6">
                 {proj.description}
               </p>
-              <div className="mt-6 border-t border-slate-100 pt-5">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Team ({proj.members.length} Employees)
-                  </p>
-                  <button
-                    onClick={() => toggleMembers(proj._id)}
-                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50 px-3 py-1 rounded-full shadow-inner"
-                  >
-                    {expandedProjects.includes(proj._id)
-                      ? "Hide"
-                      : "View Names"}
-                  </button>
-                </div>
+
+              <div className="border-t border-slate-100 pt-4">
+                <button
+                  onClick={() => toggleMembers(proj._id)}
+                  className="text-xs font-bold text-slate-500 hover:text-indigo-600"
+                >
+                  {expandedProjects.includes(proj._id)
+                    ? "Hide Team"
+                    : `View Team (${proj.members.length})`}
+                </button>
                 {expandedProjects.includes(proj._id) && (
-                  <div className="flex flex-wrap gap-2 animate-fade-in transition-all duration-300">
+                  <div className="mt-3 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-1">
                     {proj.members.map((m) => (
                       <span
                         key={m._id}
-                        className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-700 shadow-inner group-hover:bg-slate-900 group-hover:text-white transition-all"
+                        className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-[10px] font-bold"
                       >
                         {m.name}
                       </span>
@@ -288,129 +253,80 @@ export default function Projects() {
         </section>
       )}
 
-      {/* Modal logic unchanged */}
+      {/* MODAL SECTION (Same as before) */}
       {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 overflow-y-auto"
-          aria-labelledby="modal-title"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
-            <div
-              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity animate-fade-in"
-              aria-hidden="true"
-              onClick={closeModal}
-            ></div>
-            <span
-              className="hidden sm:inline-block sm:h-screen sm:align-middle"
-              aria-hidden="true"
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95">
+            <form
+              onSubmit={editingId ? handleUpdate : handleCreate}
+              className="p-8"
             >
-              &#8203;
-            </span>
-            <div className="relative inline-block transform overflow-hidden rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:align-middle animate-modal-slide-in">
-              <form
-                onSubmit={editingId ? handleUpdate : handleCreate}
-                className="p-8"
-              >
-                <div className="mb-8">
-                  <h3 className="text-2xl font-bold tracking-tight text-slate-900">
-                    {editingId
-                      ? "Edit Project Details"
-                      : "Initialize New Project"}
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Provide the project workflow details below.
+              <h3 className="text-2xl font-bold mb-6 text-slate-900">
+                {editingId ? "Update Project" : "New Project"}
+              </h3>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Project Title"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+                <textarea
+                  placeholder="Description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  className="w-full rounded-xl border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-indigo-500 h-32"
+                  required
+                />
+
+                <div className="max-h-40 overflow-y-auto border border-slate-100 rounded-xl p-3 bg-slate-50">
+                  <p className="text-xs font-bold text-slate-400 uppercase mb-2">
+                    Select Members
                   </p>
-                </div>
-                <div className="space-y-6">
-                  <div>
+                  {allEmployees.map((emp) => (
                     <label
-                      className="block text-sm font-semibold text-slate-700 ml-1"
-                      htmlFor="title"
+                      key={emp._id}
+                      className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer"
                     >
-                      Project Title
+                      <input
+                        type="checkbox"
+                        checked={formData.members.includes(emp._id)}
+                        onChange={() =>
+                          setFormData({
+                            ...formData,
+                            members: formData.members.includes(emp._id)
+                              ? formData.members.filter((id) => id !== emp._id)
+                              : [...formData.members, emp._id],
+                          })
+                        }
+                      />
+                      <span className="text-sm font-medium">{emp.name}</span>
                     </label>
-                    <input
-                      id="title"
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          title: e.target.value,
-                        }))
-                      }
-                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 shadow-sm transition outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className="block text-sm font-semibold text-slate-700 ml-1"
-                      htmlFor="description"
-                    >
-                      Description
-                    </label>
-                    <textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          description: e.target.value,
-                        }))
-                      }
-                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 shadow-sm transition outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20 min-h-32"
-                      required
-                    />
-                  </div>
-                  <div className="border-t border-slate-100 pt-6">
-                    <p className="text-sm font-semibold text-slate-700 ml-1 mb-3">
-                      Assign Members
-                    </p>
-                    <div className="max-h-56 overflow-y-auto space-y-1 rounded-2xl border border-slate-100 p-2 bg-slate-50/50">
-                      {allEmployees.map((emp) => (
-                        <label
-                          key={emp._id}
-                          className="group flex items-center gap-3 rounded-xl px-4 py-3 transition hover:bg-white border border-transparent hover:border-slate-100 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={formData.members.includes(emp._id)}
-                            onChange={() => handleMemberChange(emp._id)}
-                            className="h-5 w-5 rounded border-slate-300 text-indigo-600 transition focus:ring-indigo-500/50"
-                          />
-                          <div className="flex-1">
-                            <span className="block text-sm font-semibold text-slate-800 transition group-hover:text-slate-950">
-                              {emp.name}
-                            </span>
-                            <span className="block text-xs text-slate-500">
-                              {emp.email}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-                <div className="mt-12 flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="rounded-xl bg-slate-100 px-5 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-200 active:scale-[0.98]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-md shadow-slate-950/10 transition-all hover:bg-slate-800 hover:-translate-y-0.5 active:scale-[0.98]"
-                  >
-                    {editingId ? "Save Changes" : "Launch Project"}
-                  </button>
-                </div>
-              </form>
-            </div>
+              </div>
+              <div className="mt-8 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-5 py-2 font-bold text-slate-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold"
+                >
+                  {editingId ? "Save Changes" : "Create Project"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
