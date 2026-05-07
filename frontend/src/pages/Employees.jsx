@@ -19,15 +19,6 @@ export default function Employees() {
   const [loading, setLoading] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(false);
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "Member",
-  });
-
   useEffect(() => {
     fetchEmployees();
   }, []);
@@ -44,7 +35,7 @@ export default function Employees() {
     }
   }
 
-  // EXACT FIX: Restore clicking on employee to fetch their tasks
+  // Employee par click karke uske tasks fetch karne ka logic
   const handleUserClick = async (emp) => {
     setSelectedUser(emp);
     setLoadingTasks(true);
@@ -62,18 +53,6 @@ export default function Employees() {
       toast.error("Failed to load tasks for this employee");
     } finally {
       setLoadingTasks(false);
-    }
-  };
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    try {
-      const { data } = await axiosInstance.post("/employees", formData);
-      toast.success("Employee account created!");
-      setEmployees([...employees, data]);
-      closeModal();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Error creating account");
     }
   };
 
@@ -96,12 +75,7 @@ export default function Employees() {
     }
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setFormData({ name: "", email: "", password: "", role: "Member" });
-  };
-
-  // EXACT FIX: Restore Employee Search Logic
+  // Employee Search Logic
   const filteredUsers = useMemo(() => {
     if (!userSearch.trim()) return employees;
     const query = userSearch.toLowerCase();
@@ -112,7 +86,7 @@ export default function Employees() {
     );
   }, [employees, userSearch]);
 
-  // EXACT FIX: Restore Task Search and Status Filter Logic
+  // Task Search and Status Filter Logic
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const matchSearch =
@@ -148,7 +122,7 @@ export default function Employees() {
     <main className="p-4 md:p-6 lg:p-8 space-y-6 animate-fade-in transition-all">
       <Topbar title="Organization Registry" />
 
-      {/* Header & Add Button */}
+      {/* Header Section */}
       <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-white border border-slate-200/60 shadow-sm">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-slate-900">
@@ -158,14 +132,7 @@ export default function Employees() {
             Manage employees and click on them to view their assigned tasks.
           </p>
         </div>
-        {user?.role === "Admin" && (
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-md shadow-slate-950/10 transition-all hover:bg-slate-800 hover:-translate-y-0.5 active:scale-[0.98]"
-          >
-            <span className="text-xl">+</span> Add Staff Member
-          </button>
-        )}
+        {/* ADD STAFF BUTTON HAS BEEN COMPLETELY REMOVED FROM HERE */}
       </section>
 
       {/* Split View for Desktop: Employees on Left, Tasks on Right */}
@@ -330,109 +297,6 @@ export default function Employees() {
           )}
         </section>
       </div>
-
-      {/* Modal for Admin to Register Employees */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
-            <div
-              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
-              onClick={closeModal}
-            ></div>
-            <span className="hidden sm:inline-block sm:h-screen sm:align-middle">
-              &#8203;
-            </span>
-            <div className="relative inline-block transform overflow-hidden rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:align-middle animate-modal-slide-in">
-              <form onSubmit={handleCreate} className="p-8">
-                <div className="mb-8">
-                  <h3 className="text-2xl font-bold tracking-tight text-slate-900">
-                    Register Staff Member
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Create a new workspace account.
-                  </p>
-                </div>
-
-                <div className="space-y-6 px-1">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 ml-1">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 ml-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 ml-1">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 ml-1">
-                      Role
-                    </label>
-                    <select
-                      value={formData.role}
-                      onChange={(e) =>
-                        setFormData({ ...formData, role: e.target.value })
-                      }
-                      className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/20"
-                    >
-                      <option value="Member">Member</option>
-                      <option value="Admin">Admin</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mt-12 flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="rounded-xl bg-slate-100 px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white hover:bg-slate-800"
-                  >
-                    Generate Credentials
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
